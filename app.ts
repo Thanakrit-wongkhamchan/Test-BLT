@@ -50,6 +50,14 @@ const fixedDigit = [
     number: 6,
   },
 ];
+
+const testrun = () => {
+  const a =1 
+  const b =2
+  console.log(a+b)
+
+}
+testrun()
 // mean that customer want to buy 4 digits, 10 number, each 1000 baht,fxied third digit is 8 and fixed second digit is 6
 
 class LottoService {

@@ -50,3 +50,6 @@ To evaluate the implementation of the Lotto Service, the following **score crite
 | **Input Validation & Error Handling** | 15             | Proper validation for ticket number lengths, bet amounts, and draw results. Proper handling of invalid inputs or errors.                                                                                                                            |
 | **Performance**                       | 10             | The service should be able to handle the expected volume of data (e.g., multiple tickets or large draw sets) efficiently, without noticeable delays or issues.                                                                                      |
 | **Code Structure & Cleanliness**      | 20             | Code is well-structured, readable, and follows best practices for maintainability (e.g., modularity, naming conventions, etc.).                                                                                                                     |
+
+
+คำสั่งรัน pnpx ts-node app.ts
