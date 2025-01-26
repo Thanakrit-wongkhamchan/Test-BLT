@@ -363,7 +363,10 @@ class LottoService {
         function formatNumberWithComma(number: number): string {
           return number.toLocaleString('en-US');
         }
-        console.log(`ใบที่ ${index + 1}: เลข ${ticket.number} จำนวนเงิน ${formatNumberWithComma(ticket.amount)} บาท รางวัล: ${formatNumberWithComma(prize)} บาท`);
+        this.customerTicket.forEach((ticket, index) => {
+          let afterWinPrize = ticket.amount- ticket.discountAmount;
+          console.log(`ใบที่ ${index + 1}: เลข ${ticket.number} จำนวนเงิน ${formatNumberWithComma(ticket.amount)} บาท รางวัล: ${formatNumberWithComma(prize)} บาท จำนวนเงินที่ต้องจ่ายเพิ่มหลังถูกรางวัล ${formatNumberWithComma(afterWinPrize)}` );
+        });
       });
     } 
     
