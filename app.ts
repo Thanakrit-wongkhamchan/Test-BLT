@@ -1,28 +1,30 @@
+import { disconnect } from "process";
 import readline from "readline";
 
 type Ticket = {
   number: string;
   amount: number;
+  discountAmount: number;
 };
 
 interface PurchaseData {
   buyDigit: number;  
   buyNumber: number;  
   buyAmount: number;  
-  fixedDigit: { digit: number; number: number }[];  
+  buyDiscountAmount: number;
+  fixedDigit: { digit: number; number: number }[];
 }
 
 class LottoService {
   customerTicket: Ticket[];
   drawResult: string | null = null;
   
-  private isClosed = false;
-
   constructor() {
     this.customerTicket = []; 
     this.drawResult = null; 
   }
-
+  private isClosed = false;
+  
   //รับข้อมูลจากผู้ใช้และสิ้นสุดการทำงาน
   private rl = readline.createInterface({
     input: process.stdin,
@@ -41,9 +43,13 @@ class LottoService {
       this.isClosed = true;
     }
   }
- 
+  
+  
   // ฟังก์ชันสำหรับการซื้อตั๋ว Lotto
   async buyTicket() {
+    function formatNumberWithComma(number: number): string {
+      return number.toLocaleString('en-US');
+    }
     try {
       let continueBuying = true;
       let isWelcomeShown = true;
@@ -63,7 +69,7 @@ class LottoService {
 
           while (continueBuying) {
             const buyDigit = await this.askQuestion("จำนวนหลักที่ต้องการซื้อ 1-6 (หลัก): ");
-            if (isNaN(Number(buyDigit)) || Number(buyDigit) < 1 || Number(buyDigit) > 6) {
+            if (isNaN(Number(buyDigit)) || Number(buyDigit) < 1 || Number(buyDigit) > 6 ) {
               console.log("กรุณาใส่หลักที่ถูกต้อง (1-6)");
               continue;
             }console.log(`จำนวนหลัก ${buyDigit} หลัก`);
@@ -78,7 +84,7 @@ class LottoService {
             if (isNaN(Number(buyAmount)) || Number(buyAmount) <= 0) {
               console.log("กรุณาใส่จำนวนเงินต่อใบให้ถูกต้อง");
               continue;
-            }console.log(`Lotto ใบละ ${buyAmount} บาท ราคาทั้งหมด ${buyNumber} ใบ ${Number(buyAmount) * Number(buyNumber)} บาท`);
+            }console.log(`Lotto ใบละ ${formatNumberWithComma(Number(buyAmount))} บาท ราคาทั้งหมด ${formatNumberWithComma(Number(buyNumber))} ใบ ${formatNumberWithComma(Number(buyAmount) * Number(buyNumber))} บาท`)
 
             let fixedDigit: { digit: number; number: number }[] = [];
             const chooseFixedDigit = await this.askQuestion("ต้องการกำหนดเลขในแต่ละหลักด้วยตัวเองหรือไม่ (Y/N): ");
@@ -113,7 +119,7 @@ class LottoService {
               fixedDigit.forEach((fixedDigit) => {
                 const index = uniqueFixedDigit.findIndex((item) => item.digit === fixedDigit.digit);
                 if (index !== -1) {
-                  uniqueFixedDigit[index] = fixedDigit; 
+                  uniqueFixedDigit[index] = fixedDigit;
                 } else {
                   uniqueFixedDigit.push(fixedDigit);
                 }
@@ -129,11 +135,16 @@ class LottoService {
               console.log("สุ่มเลขทั้งหมด");
             }
             
+            let buyDiscountAmount = "0";
+            if(buyDigit.length >= 5) {
+              buyDiscountAmount = (Number(buyAmount) - (Number(buyAmount) * 0.1)).toString();
+            }
             
             const purchaseData = {
               buyDigit: Number(buyDigit),
               buyNumber: Number(buyNumber),
               buyAmount: Number(buyAmount),
+              buyDiscountAmount: Number(buyDiscountAmount),
               fixedDigit, 
             };
             this.getRandomNumber(purchaseData);
@@ -146,7 +157,7 @@ class LottoService {
           while (continueBuying) {
             const lottoNumber = await this.askQuestion("กรุณาใส่เลข Lotto ที่คุณต้องการตั้งแต่ 1-6 (หลัก): ");
 
-            if (lottoNumber.length > 6 || lottoNumber.length < 1 || isNaN(Number(lottoNumber))) {
+            if (lottoNumber.length > 6 || lottoNumber.length < 1 || isNaN(Number(lottoNumber)) || Number(lottoNumber) < 0) {
               console.log("กรุณาใส่เลข Lotto เป็นตัวเลขไม่เกิน 6 หลัก");
               continue;
             }
@@ -156,8 +167,13 @@ class LottoService {
               continue;
             }
 
-            this.getTicket(lottoNumber, amount);
-            console.log(`Lotto ของคุณเลข ${lottoNumber} จำนวน ${amount} บาท`);
+            let discountAmount = "0";
+            if(lottoNumber.length >= 5) {
+              discountAmount = (Number(amount) - (Number(amount) * 0.1)).toString();
+            }
+
+            this.getTicket(lottoNumber, amount, discountAmount);
+            console.log(`Lotto ของคุณเลข ${lottoNumber} จำนวน ${formatNumberWithComma(Number(amount))} บาท`);
 
             while (true) {
               const confirm = await this.askQuestion("ต้องการซื้อต่อหรือไม่ (Y/N): ");
@@ -186,29 +202,41 @@ class LottoService {
           console.log("กรุณาเลือกโหมดที่ถูกต้อง (B/R/I)");
         }
       }
-
+      
+      
       //สรุป input ทั้งหมด
+      const hasDiscount = this.customerTicket.some(ticket => ticket.discountAmount > 0);
+
+      if (hasDiscount) {
+        console.log(`คุณได้รับส่วนลด 10% จากการซื้อ Lotto 5 หลักขึ้นไป`);
+      }
       console.log("Lotto ทั้งหมดของคุณ:");
-        this.customerTicket.forEach((ticket, index) => {
-          console.log(`ใบที่ ${index + 1} เลข ${ticket.number} จำนวน ${ticket.amount} บาท`);
-        });
+      this.customerTicket.forEach((ticket, index) => {
+        if (ticket.discountAmount > 0) {
+          console.log(`ใบที่ ${index + 1} เลข ${ticket.number} จำนวน ${formatNumberWithComma(ticket.discountAmount)} บาท (ส่วนลดแล้ว)`);
+        } else {
+          console.log(`ใบที่ ${index + 1} เลข ${ticket.number} จำนวน ${formatNumberWithComma(ticket.amount)} บาท`);
+        }
+      });
+     
     } catch (error) {
       console.error("เกิดข้อผิดพลาด:", error);
     }
   }
 
   // ฟังก์ชันรับเลข Lotto และจำนวนเงินที่ซื้อ
-  getTicket(lottoNumber: string, amount: string) {
+  getTicket(lottoNumber: string, amount: string, discountAmount: string = amount) {
     this.customerTicket.push({
       number: String(lottoNumber),
       amount: Number(amount),
+      discountAmount: Number(discountAmount),
     });
   }
   
   // ฟังก์ชันเมื่อเลือกโหมดสุ่มเลข Lotto
-  async getRandomNumber(purchaseData: PurchaseData) {
-    const { buyDigit, buyNumber, buyAmount, fixedDigit } = purchaseData;
-    const tickets: { number: string; amount: number }[] = [];  
+  getRandomNumber(purchaseData: PurchaseData) {
+    const { buyDigit, buyNumber, buyAmount, buyDiscountAmount, fixedDigit } = purchaseData;
+    const tickets: { number: string; amount: number; discountAmount: number}[] = [];  
   
     while (tickets.length < buyNumber) {
       let randomNumber = "";
@@ -218,14 +246,25 @@ class LottoService {
           randomNumber += fixed.number.toString();  
         } else {
           randomNumber += Math.floor(Math.random() * 10).toString();  
-        }
+        } 
       }
-  
+      
+      
       // ไว้ทำให้ครบ 6 หลักเวลาตัวหน้าเป็น 0
       randomNumber = randomNumber.padStart(buyDigit, "0");
+
+      const checkRandomNumber = tickets.filter((ticket) => ticket.number === randomNumber)
+      if (checkRandomNumber.length > 0) {
+        continue;
+      }
+      
+        
+      
       tickets.push({
         number: randomNumber, 
         amount: buyAmount,
+        discountAmount: buyDiscountAmount,
+        
       });
     }
     this.customerTicket.push(...tickets);
@@ -244,7 +283,8 @@ class LottoService {
       } 
       
       // ถ้าเลือก CUSTOM กำหนดผลรางวัลเอง
-      else if (choice.toUpperCase() === "C") {const customNumber = await this.askQuestion("กรุณาใส่ผลรางวัลที่กำหนดเอง 6 หลัก: ");
+      else if (choice.toUpperCase() === "C"|| choice.toUpperCase() === "CUSTOM") {
+        const customNumber = await this.askQuestion("กรุณาใส่ผลรางวัลที่กำหนดเอง 6 หลัก: ");
         if (customNumber.length === 6 && !isNaN(Number(customNumber))) {
           this.drawResult = customNumber;
         } 
@@ -297,10 +337,7 @@ class LottoService {
         let prizeMultiplier = 0;
         const ticketString = ticket.number.toString();
         const drawResultString = this.drawResult!;
-        const matchLength = Math.min(
-          ticketString.length,
-          drawResultString.length
-        );
+        const matchLength = Math.min(ticketString.length,drawResultString.length);
         switch (matchLength) {
           case 6:
             prizeMultiplier = 10**6;
@@ -323,7 +360,10 @@ class LottoService {
             break;
         }
         const prize = ticket.amount * prizeMultiplier;
-        console.log(`ใบที่ ${index + 1}: เลข ${ticket.number}, จำนวนเงิน ${ticket.amount.toFixed(2)} บาท, รางวัล: ${prize.toFixed(2)} บาท`);
+        function formatNumberWithComma(number: number): string {
+          return number.toLocaleString('en-US');
+        }
+        console.log(`ใบที่ ${index + 1}: เลข ${ticket.number} จำนวนเงิน ${formatNumberWithComma(ticket.amount)} บาท รางวัล: ${formatNumberWithComma(prize)} บาท`);
       });
     } 
     
@@ -349,3 +389,6 @@ async function main() {
 }
 
 main();
+
+
+//ถ้าซื้อ 5 หลักขึ้นไป ลด 10 เปอเซ็นต์ แต่ถ้าถูกรางวัล กลับไปจ่ายเต็มจำนวน
